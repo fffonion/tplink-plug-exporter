@@ -55,10 +55,10 @@ func NewExporter(t *ExporterTarget) *Exporter {
 			"Current voltage connected to device in Volt.",
 			labelNames, constLabels),
 		metricsPowerLoad: prometheus.NewDesc("kasa_power_load",
-			"Power of load in Watt.",
+			"Current power in Watt.",
 			labelNames, constLabels),
 		metricsPowerTotal: prometheus.NewDesc("kasa_power_total",
-			"Power of load and device itself in Watt.",
+			"Power consumption since device connected in kWh.",
 			labelNames, constLabels),
 	}
 	return e
@@ -109,7 +109,7 @@ func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
 			float64(r.Voltage), alias)
 		ch <- prometheus.MustNewConstMetric(k.metricsPowerLoad, prometheus.GaugeValue,
 			float64(r.Power), alias)
-		ch <- prometheus.MustNewConstMetric(k.metricsPowerTotal, prometheus.GaugeValue,
+		ch <- prometheus.MustNewConstMetric(k.metricsPowerTotal, prometheus.CounterValue,
 			float64(r.Total), alias)
 	}
 
