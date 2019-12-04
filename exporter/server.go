@@ -15,6 +15,7 @@ func NewHttpServer() *HttpServer {
 	s := &HttpServer{
 		mux: http.NewServeMux(),
 	}
+	s.mux.HandleFunc("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{}).ServeHTTP)
 
 	s.mux.HandleFunc("/scrape", s.ScrapeHandler)
 	return s

@@ -3,12 +3,13 @@ package main
 import (
 	"net/http"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/fffonion/tplink-plug-exporter/exporter"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
 	s := exporter.NewHttpServer()
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":9233", s)
+	log.Infoln("Accepting Prometheus Requests on :9233")
+	log.Fatal(http.ListenAndServe(":9233", s))
 }
