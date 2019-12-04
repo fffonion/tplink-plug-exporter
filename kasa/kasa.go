@@ -13,7 +13,6 @@ import (
 type KasaClient struct {
 	addr  string
 	model string
-	conn  *net.Conn
 }
 
 type KasaClientConfig struct {
