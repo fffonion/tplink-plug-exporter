@@ -2,6 +2,14 @@
 
 Export TP-Link Smart Plug metrics to grafana dashboard
 
+## Install
+
+Download from [releases](https://github.com/fffonion/tplink-plug-exporter/releases) or run from docker
+
+```
+docker run -d -p 9233:9233 fffonion/tplink-plug-exporter
+```
+
 ## Grafana dashboard
 
 Search for `Kasa` inside grafana or install from https://grafana.com/grafana/dashboards/10957
