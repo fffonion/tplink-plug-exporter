@@ -19,6 +19,10 @@ type KasaClientConfig struct {
 	Host string
 }
 
+type KasaRequestContext struct {
+	ChildIDs []string `json:"child_ids"`
+}
+
 type RPCResponse struct {
 	ErrCode int `json:"err_code"`
 }
@@ -129,14 +133,19 @@ func (c *KasaClient) Request(payload interface{}) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *KasaClient) RPC(service string, cmd string, payload interface{}, out interface{}) error {
-	payload = map[string]interface{}{
+func (c *KasaClient) RPC(service string, cmd string,
+	ctx *KasaRequestContext, payload interface{}, out interface{}) error {
+
+	body := map[string]interface{}{
 		service: map[string]interface{}{
 			cmd: payload,
 		},
 	}
+	if ctx != nil {
+		body["context"] = ctx
+	}
 
-	response, err := c.Request(payload)
+	response, err := c.Request(body)
 	if err != nil {
 		return err
 	}
@@ -163,14 +172,16 @@ func (c *KasaClient) RPC(service string, cmd string, payload interface{}, out in
 
 }
 
-func (c *KasaClient) SystemService() *KasaClientSystemService {
+func (c *KasaClient) SystemService(ctx *KasaRequestContext) *KasaClientSystemService {
 	return &KasaClientSystemService{
-		c: c,
+		c:   c,
+		ctx: ctx,
 	}
 }
 
-func (c *KasaClient) EmeterService() *KasaClientEmeterService {
+func (c *KasaClient) EmeterService(ctx *KasaRequestContext) *KasaClientEmeterService {
 	return &KasaClientEmeterService{
-		c: c,
+		c:   c,
+		ctx: ctx,
 	}
 }
