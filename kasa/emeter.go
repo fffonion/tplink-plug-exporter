@@ -1,7 +1,8 @@
 package kasa
 
 type KasaClientEmeterService struct {
-	c *KasaClient
+	c   *KasaClient
+	ctx *KasaRequestContext
 }
 
 type GetRealtimeRequest struct {
@@ -34,7 +35,7 @@ func (s *KasaClientEmeterService) GetRealtime() (*GetRealtimeResponse, error) {
 	response := GetRealtimeResponse{
 		TotalWh: -1,
 	}
-	err := s.c.RPC("emeter", "get_realtime", GetRealtimeRequest{}, &response)
+	err := s.c.RPC("emeter", "get_realtime", s.ctx, GetRealtimeRequest{}, &response)
 
 	response.Normalize()
 

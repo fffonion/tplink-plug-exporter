@@ -77,7 +77,7 @@ func (k *Exporter) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
-	s := k.client.SystemService()
+	s := k.client.SystemService(nil)
 	r, err := s.GetSysInfo()
 
 	if err != nil {
@@ -85,32 +85,56 @@ func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
 			0)
 		return
 	}
-	alias := r.Alias
 
 	ch <- prometheus.MustNewConstMetric(k.metricsRelayState, prometheus.GaugeValue,
-		float64(r.RelayState), alias)
+		float64(r.RelayState), r.Alias)
 	ch <- prometheus.MustNewConstMetric(k.metricsOnTime, prometheus.CounterValue,
-		float64(r.OnTime), alias)
+		float64(r.OnTime), r.Alias)
 	ch <- prometheus.MustNewConstMetric(k.metricsRssi, prometheus.GaugeValue,
-		float64(r.RSSI), alias)
+		float64(r.RSSI), r.Alias)
+
+	aliases := map[string]string{}
+	emeterContexts := []*kasa.KasaRequestContext{
+		nil, // a nil context, represent the single plug or the parent strip
+	}
+	// iterrate over every child plug in a power strip
+	for _, children := range r.Children {
+		aliases[children.ID] = children.Alias
+		emeterContexts = append(emeterContexts, &kasa.KasaRequestContext{
+			ChildIDs: []string{children.ID},
+		})
+
+		ch <- prometheus.MustNewConstMetric(k.metricsRelayState, prometheus.GaugeValue,
+			float64(children.State), children.Alias)
+	}
 
 	if s.EmeterSupported(r) {
-		m := k.client.EmeterService()
-		r, err := m.GetRealtime()
+		for _, ctx := range emeterContexts {
+			m := k.client.EmeterService(ctx)
+			re, err := m.GetRealtime()
 
-		if err != nil {
-			ch <- prometheus.MustNewConstMetric(k.metricsUp, prometheus.GaugeValue,
-				0)
-			return
+			alias := r.Alias
+			if ctx != nil {
+				alias = aliases[ctx.ChildIDs[0]]
+			}
+
+			// TODO: only set the child up to 0 on error
+			if err != nil {
+				ch <- prometheus.MustNewConstMetric(k.metricsUp, prometheus.GaugeValue,
+					0)
+				return
+			}
+
+			ch <- prometheus.MustNewConstMetric(k.metricsCurrent, prometheus.GaugeValue,
+				float64(re.Current), alias)
+			ch <- prometheus.MustNewConstMetric(k.metricsVoltage, prometheus.GaugeValue,
+				float64(re.Voltage), alias)
+			ch <- prometheus.MustNewConstMetric(k.metricsPowerLoad, prometheus.GaugeValue,
+				float64(re.Power), alias)
+			ch <- prometheus.MustNewConstMetric(k.metricsPowerTotal, prometheus.CounterValue,
+				float64(re.Total), alias)
 		}
-		ch <- prometheus.MustNewConstMetric(k.metricsCurrent, prometheus.GaugeValue,
-			float64(r.Current), alias)
-		ch <- prometheus.MustNewConstMetric(k.metricsVoltage, prometheus.GaugeValue,
-			float64(r.Voltage), alias)
-		ch <- prometheus.MustNewConstMetric(k.metricsPowerLoad, prometheus.GaugeValue,
-			float64(r.Power), alias)
-		ch <- prometheus.MustNewConstMetric(k.metricsPowerTotal, prometheus.CounterValue,
-			float64(r.Total), alias)
+
 	}
 
 	ch <- prometheus.MustNewConstMetric(k.metricsUp, prometheus.GaugeValue,
