@@ -3,6 +3,7 @@ package exporter
 import (
 	"github.com/fffonion/tplink-plug-exporter/kasa"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 type Exporter struct {
@@ -10,6 +11,7 @@ type Exporter struct {
 	client *kasa.KasaClient
 
 	metricsUp,
+	metricsMetadata,
 	metricsRelayState,
 	metricsOnTime,
 	metricsRssi,
@@ -26,7 +28,7 @@ type ExporterTarget struct {
 func NewExporter(t *ExporterTarget) *Exporter {
 	var (
 		constLabels = prometheus.Labels{}
-		labelNames  = []string{"alias"}
+		labelNames  = []string{"alias", "id"}
 	)
 
 	e := &Exporter{
@@ -38,6 +40,14 @@ func NewExporter(t *ExporterTarget) *Exporter {
 			"Device online.",
 			nil, constLabels,
 		),
+
+		metricsMetadata: prometheus.NewDesc("kasa_metadata",
+			"Device metadata.",
+			[]string{
+				"alias", "hw_ver", "sw_ver", "model", "feature",
+			}, constLabels,
+		),
+
 		metricsRelayState: prometheus.NewDesc("kasa_relay_state",
 			"Relay state (switch on/off).",
 			labelNames, constLabels,
@@ -48,6 +58,7 @@ func NewExporter(t *ExporterTarget) *Exporter {
 		metricsRssi: prometheus.NewDesc("kasa_rssi",
 			"Wifi received signal strength indicator.",
 			labelNames, constLabels),
+
 		metricsCurrent: prometheus.NewDesc("kasa_current",
 			"Current flowing through device in Ampere.",
 			labelNames, constLabels),
@@ -83,20 +94,26 @@ func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		ch <- prometheus.MustNewConstMetric(k.metricsUp, prometheus.GaugeValue,
 			0)
+		log.Errorln("error collecting", k.target, ":", err)
 		return
 	}
 
+	// "alias", "hw_ver", "sw_ver", "model", "feature",
+	ch <- prometheus.MustNewConstMetric(k.metricsMetadata, prometheus.GaugeValue,
+		1, r.Alias, r.HardwareVersion, r.SoftwareVersion, r.Model, r.Feature)
+
 	ch <- prometheus.MustNewConstMetric(k.metricsRelayState, prometheus.GaugeValue,
-		float64(r.RelayState), r.Alias)
+		float64(r.RelayState), r.Alias, r.DeviceID)
 	ch <- prometheus.MustNewConstMetric(k.metricsOnTime, prometheus.CounterValue,
-		float64(r.OnTime), r.Alias)
+		float64(r.OnTime), r.Alias, r.DeviceID)
 	ch <- prometheus.MustNewConstMetric(k.metricsRssi, prometheus.GaugeValue,
-		float64(r.RSSI), r.Alias)
+		float64(r.RSSI), r.Alias, r.DeviceID)
 
 	aliases := map[string]string{}
 	emeterContexts := []*kasa.KasaRequestContext{
 		nil, // a nil context, represent the single plug or the parent strip
 	}
+
 	// iterrate over every child plug in a power strip
 	for _, children := range r.Children {
 		aliases[children.ID] = children.Alias
@@ -105,7 +122,10 @@ func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
 		})
 
 		ch <- prometheus.MustNewConstMetric(k.metricsRelayState, prometheus.GaugeValue,
-			float64(children.State), children.Alias)
+			float64(children.State), children.Alias, children.ID)
+
+		ch <- prometheus.MustNewConstMetric(k.metricsOnTime, prometheus.CounterValue,
+			float64(children.OnTime), children.Alias, children.ID)
 	}
 
 	if s.EmeterSupported(r) {
@@ -113,26 +133,30 @@ func (k *Exporter) Collect(ch chan<- prometheus.Metric) {
 			m := k.client.EmeterService(ctx)
 			re, err := m.GetRealtime()
 
-			alias := r.Alias
+			labels := []string{r.Alias, r.DeviceID}
+			// if this is a child plug in a powerstrip, set the alias and ID
 			if ctx != nil {
-				alias = aliases[ctx.ChildIDs[0]]
+				id := ctx.ChildIDs[0]
+				labels[0] = aliases[id]
+				labels[1] = id
 			}
 
 			// TODO: only set the child up to 0 on error
 			if err != nil {
 				ch <- prometheus.MustNewConstMetric(k.metricsUp, prometheus.GaugeValue,
 					0)
+				log.Errorln("error collecting", k.target, ":", err)
 				return
 			}
 
 			ch <- prometheus.MustNewConstMetric(k.metricsCurrent, prometheus.GaugeValue,
-				float64(re.Current), alias)
+				float64(re.Current), labels...)
 			ch <- prometheus.MustNewConstMetric(k.metricsVoltage, prometheus.GaugeValue,
-				float64(re.Voltage), alias)
+				float64(re.Voltage), labels...)
 			ch <- prometheus.MustNewConstMetric(k.metricsPowerLoad, prometheus.GaugeValue,
-				float64(re.Power), alias)
+				float64(re.Power), labels...)
 			ch <- prometheus.MustNewConstMetric(k.metricsPowerTotal, prometheus.CounterValue,
-				float64(re.Total), alias)
+				float64(re.Total), labels...)
 		}
 
 	}

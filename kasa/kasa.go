@@ -136,6 +136,8 @@ func (c *KasaClient) Request(payload interface{}) ([]byte, error) {
 func (c *KasaClient) RPC(service string, cmd string,
 	ctx *KasaRequestContext, payload interface{}, out interface{}) error {
 
+	errmsgPrefix := fmt.Sprintf("%s.%s", service, cmd)
+
 	body := map[string]interface{}{
 		service: map[string]interface{}{
 			cmd: payload,
@@ -147,23 +149,23 @@ func (c *KasaClient) RPC(service string, cmd string,
 
 	response, err := c.Request(body)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %v", errmsgPrefix, err)
 	}
 
 	var outMarshal map[string]map[string]map[string]interface{}
 
 	err = json.Unmarshal(response, &outMarshal)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %v", errmsgPrefix, err)
 	}
 
 	if outMarshal[service] == nil || outMarshal[service][cmd] == nil {
-		return fmt.Errorf("malformed response: %v", outMarshal)
+		return fmt.Errorf("%s: malformed response: %v", errmsgPrefix, outMarshal)
 	}
 	var r RPCResponse
 	mapstructure.Decode(outMarshal[service][cmd], &r)
 	if r.ErrCode != 0 {
-		return fmt.Errorf("rpc error: %v", outMarshal)
+		return fmt.Errorf("%s: rpc error: %v", errmsgPrefix, outMarshal)
 	}
 
 	mapstructure.Decode(outMarshal[service][cmd], &out)
