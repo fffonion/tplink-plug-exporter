@@ -44,6 +44,20 @@ scrape_configs:
         - localhost:9233
 ```
 
+## Docker Build Instructions
+
+Build for both `arm64` and `amd64`:
+```
+docker build -t <image-name>:latest-arm64 --platform linux/arm64 --build-arg GOARCH=arm64 .
+docker build -t <image-name>:latest-amd64 --platform linux/amd64 --build-arg GOARCH=amd64 .
+```
+
+Merge them in one manifest:
+```
+docker manifest create <image-name>:latest --amend <image-name>:latest-arm64 --amend <image-name>:latest-amd64
+docker manifest push <image-name>:latest
+```
+
 ## See also
 
 - Original reverse engineering work: https://github.com/softScheck/tplink-smartplug
