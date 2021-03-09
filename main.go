@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/prometheus/common/log"
@@ -9,7 +10,10 @@ import (
 )
 
 func main() {
+	var metricsAddr = flag.String("metrics.addr", ":9233", "address for tplink-plug exporter")
+
+	flag.Parse()
 	s := exporter.NewHttpServer()
-	log.Infoln("Accepting Prometheus Requests on :9233")
-	log.Fatal(http.ListenAndServe(":9233", s))
+	log.Infof("Accepting Prometheus Requests on %s", *metricsAddr)
+	log.Fatal(http.ListenAndServe(*metricsAddr, s))
 }

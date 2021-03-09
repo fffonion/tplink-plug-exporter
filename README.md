@@ -10,6 +10,16 @@ Download from [releases](https://github.com/fffonion/tplink-plug-exporter/releas
 docker run -d -p 9233:9233 fffonion/tplink-plug-exporter
 ```
 
+### Usage
+Use the -h flag to see full usage:
+
+```
+$ tplink-plug-exporter -h
+Usage of tplink-plug-exporter.exe:
+  -metrics.addr string
+        address for tplink-plug exporter (default ":9233")
+```
+
 ## Grafana dashboard
 
 Search for `Kasa` inside grafana or install from https://grafana.com/grafana/dashboards/10957
