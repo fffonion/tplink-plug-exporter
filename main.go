@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	var metricsAddr = flag.String("metrics.addr", ":9233", "address for tplink-plug exporter")
+	var metricsAddr = flag.String("metrics.listen-addr", ":9233", "listen address for tplink-plug exporter")
 
 	flag.Parse()
 	s := exporter.NewHttpServer()

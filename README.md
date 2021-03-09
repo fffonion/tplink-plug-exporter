@@ -16,8 +16,8 @@ Use the -h flag to see full usage:
 ```
 $ tplink-plug-exporter -h
 Usage of tplink-plug-exporter:
-  -metrics.addr string
-        address for tplink-plug exporter (default ":9233")
+  -metrics.listen-addr string
+        listen address for tplink-plug exporter (default ":9233")
 ```
 
 ## Grafana dashboard
