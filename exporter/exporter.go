@@ -3,7 +3,7 @@ package exporter
 import (
 	"github.com/fffonion/tplink-plug-exporter/kasa"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type Exporter struct {

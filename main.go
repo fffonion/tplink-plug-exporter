@@ -4,7 +4,7 @@ import (
 	"flag"
 	"net/http"
 
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/fffonion/tplink-plug-exporter/exporter"
 )
