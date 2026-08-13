@@ -1,5 +1,6 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>haraldkoch/renovate-config"],
-  "forkProcessing": "enabled"
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["local>haraldkoch/renovate-config"],
+  forkProcessing: "enabled",
+  postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
 }
